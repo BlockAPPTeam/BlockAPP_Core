@@ -2,6 +2,7 @@
 using System;
 using System.Threading;
 using System.IO;
+using BlockAPP_Core.Helpers;
 
 namespace BlockAPPRunner
 {
@@ -23,6 +24,9 @@ namespace BlockAPPRunner
 
                 var _JsonGenesisBlock = File.ReadAllText(AppContext.BaseDirectory + "\\genesisBlock.json");
                 var _GenesisBlock = JsonConvert.DeserializeObject<BlockAPP_Core.Models.Block>(_JsonGenesisBlock);
+
+                var _GenerateId = _GenesisBlock.GetId();
+
                 Console.ReadLine();
             }
         }

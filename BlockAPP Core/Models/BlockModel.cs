@@ -14,7 +14,7 @@ namespace BlockAPP_Core.Models
         public int Timestamp { get; set; }
         public int NumberOfTransactions { get; set; }
         public int PayloadLength { get; set; }
-        public Block previousBlock { get; set; }
+        public UInt64 PreviousBlockId { get; set; }
         public String GeneratorPublicKey { get; set; }
         public Transaction[] Transactions { get; set; }
         public int Height { get; set; }
