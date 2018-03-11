@@ -1,0 +1,12 @@
+{
+  "Port": 4096,
+  "Address": "0.0.0.0",
+  "LocalIP": "",
+  "LogLevel": 0,
+  "SecretKey": "594fe0f3",
+  "ApiWhiteList": [],
+  "PeersTimeout": 4000,
+  "Peers": [],
+  "PeersBlacklist": [],
+  "DAppPassword": "ytfACAMegjrK"
+}

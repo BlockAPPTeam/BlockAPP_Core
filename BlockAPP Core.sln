@@ -5,6 +5,8 @@ VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlockAPP Core", "BlockAPP Core\BlockAPP Core.csproj", "{542CE907-59EB-4693-AEED-6A0326F955C6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlockAPP Runner", "BlockAPPRunner\BlockAPP Runner.csproj", "{A45103BA-037C-4740-A736-41E0BD1E930A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{542CE907-59EB-4693-AEED-6A0326F955C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{542CE907-59EB-4693-AEED-6A0326F955C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{542CE907-59EB-4693-AEED-6A0326F955C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A45103BA-037C-4740-A736-41E0BD1E930A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A45103BA-037C-4740-A736-41E0BD1E930A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A45103BA-037C-4740-A736-41E0BD1E930A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A45103BA-037C-4740-A736-41E0BD1E930A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

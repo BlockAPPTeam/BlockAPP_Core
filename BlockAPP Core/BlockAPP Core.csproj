@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AssemblyName>BlockAPP_Core</AssemblyName>
+    <RootNamespace>BlockAPP_Core</RootNamespace>
   </PropertyGroup>
 
 </Project>
