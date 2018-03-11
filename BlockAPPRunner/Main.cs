@@ -17,10 +17,12 @@ namespace BlockAPPRunner
                 }
 
                 Console.WriteLine("BlockAPP_Core.Helpers.Networking.GetLocalIP => " + BlockAPP_Core.Helpers.Networking.GetLocalIP());
-
+                
                 var _JsonConfig = File.ReadAllText(AppContext.BaseDirectory + "\\config.json");
                 var _Config = JsonConvert.DeserializeObject<BlockAPP_Core.Models.Config>(_JsonConfig);
 
+                var _JsonGenesisBlock = File.ReadAllText(AppContext.BaseDirectory + "\\genesisBlock.json");
+                var _GenesisBlock = JsonConvert.DeserializeObject<BlockAPP_Core.Models.Block>(_JsonGenesisBlock);
                 Console.ReadLine();
             }
         }
