@@ -1,9 +1,7 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
-using System.Text;
-using BlockAPP_Core.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Threading.Tasks;
+using BlockAPP_Core.Db.Entities;
 
 namespace BlockAPP_Core.Db.Concrete
 {
@@ -16,7 +14,7 @@ namespace BlockAPP_Core.Db.Concrete
         public DbSet<Block> Blocks { get; set; }
 
         //
-        #region Users
+        #region Blocks
 
         public async Task AddBlock(Block _Model)
         {
