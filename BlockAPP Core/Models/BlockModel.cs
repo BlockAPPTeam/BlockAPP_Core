@@ -6,6 +6,7 @@ namespace BlockAPP_Core.Models
 {
     public class Block
     {
+        public String Id { get; set; }
         public int Version { get; set; }
         public Decimal TotalAmount { get; set; }
         public Decimal TotalFee { get; set; }
@@ -19,6 +20,5 @@ namespace BlockAPP_Core.Models
         public Transaction[] Transactions { get; set; }
         public int Height { get; set; }
         public String BlockSignature { get; set; }
-        public UInt64 Id { get; set; }
     }
 }

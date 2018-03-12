@@ -1,21 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 
 namespace BlockAPP_Core.Helpers
 {
     public static class Slots
     {
-        public static long BeginEpochTime()
+        public static UInt64 GetCurrentSlotNumber()
         {
-            Int32 _UnixTimestamp = (Int32)(SoftConfigs._StartDelegates.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-            return _UnixTimestamp;
+            var _Spended = SoftConfigs._StartDelegates - DateTime.Now;
+            return (UInt64)Math.Floor(_Spended.TotalSeconds / SoftConfigs.BlockInterval);
         }
 
-        public static long GetEpochTime(long _Timestamp)
+        public static int GetSlotPadding(Models.Block _Block)
         {
-            Int32 _UnixTimestamp = (Int32)(DateTime.Now.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-            return (long)Math.Floor(((double)_Timestamp - (double)_UnixTimestamp) / 1000);
+            BigInteger _Id = BigInteger.Parse(_Block.Id);
+            while (_Id > SoftConfigs.Delegates)
+            {
+                _Id /= 2;
+            }
+
+            return Convert.ToInt32(_Id);
         }
     }
 }
