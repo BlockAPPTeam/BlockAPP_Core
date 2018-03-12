@@ -40,5 +40,12 @@ namespace BlockAPP_Core.Helpers
 
             return _Block;
         }
+
+        public static Models.Block VerifySignature(this Models.Block _Block)
+        {
+            //_Block.Height = _Block.PreviousBlockId
+
+            return _Block;
+        }
     }
 }
