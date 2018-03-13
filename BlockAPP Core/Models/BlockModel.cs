@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace BlockAPP_Core.Models
 {
@@ -17,8 +18,9 @@ namespace BlockAPP_Core.Models
 
         public int Timestamp { get; set; }
         public UInt64 Height { get; set; }
-
+        
         public String GeneratorPublicKey { get; set; }
+        [JsonIgnore]
         public String BlockSignature { get; set; }
     }
 }

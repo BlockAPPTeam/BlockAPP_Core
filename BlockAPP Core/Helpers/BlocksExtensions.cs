@@ -44,8 +44,8 @@ namespace BlockAPP_Core.Helpers
         public static Boolean Verify(this Models.Block _Block)
         {
             var _BlockJSON = JsonConvert.SerializeObject(_Block);
-            var _Hash = Hashing.GetHashForString(_BlockJSON);
-            if (_Hash == _Block.BlockSignature)
+            
+            if (RSA.VerifyData(_BlockJSON, _Block.BlockSignature, _Block.GeneratorPublicKey))
             {
                 return true;
             }
