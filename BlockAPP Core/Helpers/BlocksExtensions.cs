@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -40,11 +41,18 @@ namespace BlockAPP_Core.Helpers
             return _Block;
         }
 
-        public static Models.Block VerifySignature(this Models.Block _Block)
+        public static Boolean Verify(this Models.Block _Block)
         {
-            //_Block.Height = _Block.PreviousBlockId
-
-            return _Block;
+            var _BlockJSON = JsonConvert.SerializeObject(_Block);
+            var _Hash = Hashing.GetHashForString(_BlockJSON);
+            if (_Hash == _Block.BlockSignature)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
     }
 }
