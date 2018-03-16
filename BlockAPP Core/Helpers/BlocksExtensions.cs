@@ -13,12 +13,12 @@ namespace BlockAPP_Core.Helpers
             _SB.Append(_Block.Version);
             _SB.Append(_Block.Timestamp);
             _SB.Append(_Block.PreviousBlockId);
-            _SB.Append(_Block.NumberOfTransactions);
+            //_SB.Append(_Block.NumberOfTransactions);
             _SB.Append(_Block.TotalAmount);
             _SB.Append(_Block.TotalFee);
             _SB.Append(_Block.Reward);
-            _SB.Append(_Block.PayloadLength);
-            _SB.Append(_Block.PayloadHash);
+            //_SB.Append(_Block.PayloadLength);
+            //_SB.Append(_Block.PayloadHash);
             _SB.Append(_Block.GeneratorPublicKey);
             _SB.Append(_Block.BlockSignature);
             
@@ -44,15 +44,16 @@ namespace BlockAPP_Core.Helpers
         public static Boolean Verify(this Models.Block _Block)
         {
             var _BlockJSON = JsonConvert.SerializeObject(_Block);
-            
-            if (RSA.VerifyData(_BlockJSON, _Block.BlockSignature, _Block.GeneratorPublicKey))
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+
+            return false;
+            //if (RSA.VerifyData(_BlockJSON, _Block.BlockSignature, _Block.GeneratorPublicKey))
+            //{
+            //    return true;
+            //}
+            //else
+            //{
+            //    return false;
+            //}
         }
     }
 }
