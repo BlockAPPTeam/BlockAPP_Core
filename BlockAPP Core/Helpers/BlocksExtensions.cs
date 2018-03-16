@@ -2,6 +2,8 @@
 using System;
 using System.Security.Cryptography;
 using System.Text;
+using DbContext = BlockAPP_Core.Db.DbContextManager;
+using System.Linq;
 
 namespace BlockAPP_Core.Helpers
 {
@@ -21,7 +23,13 @@ namespace BlockAPP_Core.Helpers
 
         public static Models.Block FinalizeBlock(this Models.Block _Block)
         {
-            //_Block.Height = _Block.PreviousBlockId
+            var _PreviousBlock = DbContext._Db.Blocks.FirstOrDefault(x => x.BlockId == _Block.PreviousBlockId);
+            if (_PreviousBlock == null)
+            {
+                // ToDo
+            }
+
+            _Block.Height = _PreviousBlock.Path
 
             return _Block;
         }
