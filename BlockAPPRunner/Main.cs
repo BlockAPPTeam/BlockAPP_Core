@@ -27,7 +27,9 @@ namespace BlockAPPRunner
 
                 //var _GenerateId = _GenesisBlock.GetId();
 
-                BlockAPP_Core.Helpers.RSA.GenerateKeyPair();
+                //BlockAPP_Core.Helpers.RSA.GenerateKeyPair();
+
+                BlockAPP_Core.Db.DbContextManager.InitConnection();
 
                 Console.ReadLine();
             }

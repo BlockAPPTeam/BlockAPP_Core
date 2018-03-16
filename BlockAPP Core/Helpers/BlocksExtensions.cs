@@ -19,7 +19,7 @@ namespace BlockAPP_Core.Helpers
             return 1;
         }
 
-        public static Models.Block CreateBlock(this Models.Block _Block)
+        public static Models.Block FinalizeBlock(this Models.Block _Block)
         {
             //_Block.Height = _Block.PreviousBlockId
 

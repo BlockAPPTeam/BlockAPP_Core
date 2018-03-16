@@ -11,6 +11,7 @@ namespace BlockAPP_Core.Db.Concrete
         {
 
         }
+
         public DbSet<Block> Blocks { get; set; }
 
         //
