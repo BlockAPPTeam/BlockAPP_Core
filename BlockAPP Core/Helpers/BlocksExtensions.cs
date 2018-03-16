@@ -28,8 +28,14 @@ namespace BlockAPP_Core.Helpers
             {
                 // ToDo
             }
+            var _PBlock = BlockLoader.LoadBlock(_PreviousBlock.Path);
 
-            _Block.Height = _PreviousBlock.Path
+            _Block.Height = _PBlock.Height + 1;
+            _Block.Id = GetId(_Block);
+
+            var _BlockJSON = JsonConvert.SerializeObject(_Block);
+            var _BlockHash = Hashing.GetHashForString(_BlockJSON);
+            _Block.BlockSignature = RSA.Sign(_BlockHash, _Block.GeneratorPublicKey);
 
             return _Block;
         }
