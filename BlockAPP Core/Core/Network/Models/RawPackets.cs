@@ -14,8 +14,8 @@ namespace BlockAPP_Core.Core.Network.Models
             DataLength = _DataLength;
         }
 
-        private Byte[] DataChunk { get; set; }
-        private String ClientId { get; set; }
-        private int DataLength { get; set; }
+        public Byte[] DataChunk { get; set; }
+        public String ClientId { get; set; }
+        public int DataLength { get; set; }
     }
 }

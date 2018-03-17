@@ -11,18 +11,20 @@ namespace BlockAPP_Core.Core.Network
         {
             Id = _Guid;
             UserSocket = _Sock;
-            StationName = String.Empty;
-            ClientName = String.Empty;
             UserListentingPort = 9998;//default
             AlternateIP = String.Empty;
         }
 
         public String Id { get; private set; } 
         public Socket UserSocket { get; private set; }
-        public String ClientName { get; set; }
-        public String StationName { get; set; }
         public UInt16 UserListentingPort { get; set; }
         public String AlternateIP { get; set; }
+
+        public DateTime AddedDate { get; set; }
+        public Boolean Accepted { get; set; }
+        public String PublicKey { get; set; }
+        public String Signature { get; set; }
+        public long Timestamp { get; set; }
 
 
         public int _ZeroDataCount { get; internal set; }

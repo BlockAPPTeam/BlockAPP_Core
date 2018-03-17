@@ -14,6 +14,6 @@ namespace BlockAPP_Core.Core.Network.Models
         }
 
         public Byte[] Data { get; set; }
-        private String ClientId { get; set; }
+        public String ClientId { get; set; }
     }
 }
