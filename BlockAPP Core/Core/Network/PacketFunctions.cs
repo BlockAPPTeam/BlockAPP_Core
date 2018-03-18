@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BlockAPP_Core.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -29,6 +30,11 @@ namespace BlockAPP_Core.Core.Network
             Object _Object = Marshal.PtrToStructure(_Buffer, _Type);
             Marshal.FreeHGlobal(_Buffer);
             return _Object;
+        }
+
+        public static Boolean Verify(String _Data, String _Signature, String _Key)
+        {
+            return RSA.Verify(_Data, _Signature, _Key);
         }
     }
 }
