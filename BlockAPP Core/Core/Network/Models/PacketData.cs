@@ -21,20 +21,17 @@ namespace BlockAPP_Core.Core.Network.Models
         /****************************************************************/
 
         public UInt32 Timestamp;
-
-        /// <summary>
-        /// 300 Chars
-        /// </summary>
+        
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
         public Char[] Signature = new Char[300];
-
-        /// <summary>
-        /// 300 Chars
-        /// </summary>
+        
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
         public Char[] PublicKey = new Char[300];
 
-        //18 + 120 + 40 + 96 + 600 + 150 = 1024
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 624)]
+        public Char[] Data = new Char[624];
+
+        //300 + 300 + 624 = 1024
 
     }
 }
