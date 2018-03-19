@@ -6,15 +6,12 @@ namespace BlockAPP_Core.Core.Network.Enums
 {
     public enum PacketType
     {
-        TYPE_RequestCredentials = 0,
-        TYPE_MyCredentials = 1,
-        TYPE_Registered = 2,
-        TYPE_HostExiting = 3,
-        TYPE_ClientData = 4,
-        TYPE_ClientDisconnecting = 5,
-        TYPE_CredentialsUpdate = 6,
-        TYPE_Close = 7,
-        TYPE_Message = 8,
-        TYPE_MessageReceived = 9
+        TYPE_MyCredentials = 0,
+        TYPE_Registered = 1,
+        TYPE_HostExiting = 2,
+        TYPE_ClientDisconnecting = 3,
+        TYPE_Close = 4,
+        TYPE_Message = 5,
+        TYPE_MessageReceived = 6
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -10,28 +11,25 @@ namespace BlockAPP_Core.Core.Network.Models
     {
 
         /****************************************************************/
-        //HEADER is 18 BYTES
+        //HEADER is 6 BYTES
         public UInt16 Packet_Type;  //TYPE_??
         public UInt16 Packet_Size;
-        public UInt16 Data_Type;    // DATA_ type fields
-        public UInt16 maskTo;       // SENDTO_MY_SHUBONLY and the like.
-        public UInt32 idTo;         // Used if maskTo is SENDTO_INDIVIDUAL
-        public UInt32 idFrom;       // Client ID value
-        public UInt16 nAppLevel;
+        public UInt16 Packet_SubType;
         /****************************************************************/
 
         public UInt32 Timestamp;
-        
+
+        [JsonIgnore]
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
         public Char[] Signature = new Char[300];
         
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
         public Char[] PublicKey = new Char[300];
 
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 624)]
-        public Char[] Data = new Char[624];
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 618)]
+        public Char[] Data = new Char[618];
 
-        //300 + 300 + 624 = 1024
+        //300 + 300 + 618 + 6 = 1024
 
     }
 }
