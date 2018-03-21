@@ -52,7 +52,10 @@ namespace BlockAPPRunner
             }
         }
 
-        string _PrivateKey;
+        static int ServerPort = 100000;
+
+
+       static string _PrivateKey;
        static Timer timerGarbagePatrol;
 
         static Thread DataProcessThread = null;
@@ -63,7 +66,9 @@ namespace BlockAPPRunner
 
         static Boolean _Close = false;
 
-        private static void StartServer()
+        static AutoResetEvent autoEvent;//mutex
+        static AutoResetEvent autoEvent2;//mutex
+        static void StartServer()
         {
             try
             {
@@ -75,21 +80,17 @@ namespace BlockAPPRunner
                 //Create HostServer
                 _Server = new Server();
 
-                svr.Listen(MyPort);//MySettings.HostPort);
-                svr.OnReceiveData += new Server.ReceiveDataCallback(OnDataReceived);
-                svr.OnClientConnect += new Server.ClientConnectCallback(NewClientConnected);
-                svr.OnClientDisconnect += new Server.ClientDisconnectCallback(ClientDisconnect);
+                _Server.Start(ServerPort);//MySettings.HostPort);
+                _Server.OnReceiveData += new Server.ReceiveDataCallback(OnDataReceived);
+                _Server.OnClientConnect += new Server.ClientConnectCallback(NewClientConnected);
+                _Server.OnClientDisconnect += new Server.ClientDisconnectCallback(ClientDisconnect);
 
                 DataProcessThread.Start();
                 FullPacketDataProcessThread.Start();
-
-                OnCommunications($"TCPiP Server is listening on port {MyPort}", INK.CLR_GREEN);
             }
             catch (Exception ex)
             {
-                var exceptionMessage = (ex.InnerException != null) ? ex.InnerException.Message : ex.Message;
-                //Debug.WriteLine($"EXCEPTION IN: StartPacketCommunicationsServiceThread - {exceptionMessage}");
-                OnCommunications($"EXCEPTION: TCPiP FAILED TO START, exception: {exceptionMessage}", INK.CLR_RED);
+                // ToDo
             }
         }
         static void NormalizeThePackets()
@@ -300,7 +301,7 @@ namespace BlockAPPRunner
             catch { }
         }
 
-        StringBuilder _SB;
+        static StringBuilder _SB;
         static void AssembleMessage(String _ClientID, Byte[] _Data)
         {
             try
@@ -358,7 +359,7 @@ namespace BlockAPPRunner
             catch { }
         }
         
-        private void ShotdownServer()
+        static void ShotdownServer()
         {
             if (_Server != null)
             {
@@ -392,7 +393,7 @@ namespace BlockAPPRunner
         }
 
 
-        private void CheckConnectionTimersGarbagePatrol()
+        static void CheckConnectionTimersGarbagePatrol()
         {
             List<String> ClientIDsToClear = new List<String>();
             
@@ -420,8 +421,8 @@ namespace BlockAPPRunner
                 }
             }
         }
-        
-        private void CleanupDeadClient(String _Guid)
+
+        static void CleanupDeadClient(String _Guid)
         {
             try
             {
@@ -454,8 +455,8 @@ namespace BlockAPPRunner
         }
 
 
-        
-        private void OnDataReceived(String _ClientId, Byte[] _Data, int _Size)
+
+        static void OnDataReceived(String _ClientId, Byte[] _Data, int _Size)
         {
             if (_ClientsRawPackets.ContainsKey(_ClientId))
             {
@@ -464,8 +465,8 @@ namespace BlockAPPRunner
                 autoEvent.Set();
             }
         }
-        
-        private void NewClientConnected(String _CLientId)
+
+        static void NewClientConnected(String _CLientId)
         {
             try
             {
@@ -491,8 +492,8 @@ namespace BlockAPPRunner
                 // ToDo
             }
         }
-        
-        private void SetNewConnectionData_FromThread(String _CLientId)
+
+        static void SetNewConnectionData_FromThread(String _CLientId)
         {
             try
             {
@@ -512,10 +513,10 @@ namespace BlockAPPRunner
         }
 
 
-      
 
 
-        private void ClientDisconnect(String _CLientId)
+
+        static void ClientDisconnect(String _CLientId)
         {
             if (_Close) return;
 
@@ -550,7 +551,7 @@ namespace BlockAPPRunner
             Thread.Sleep(10);
         }
 
-        private void RemoveClient_FromThread(String _CLientId)
+        static void RemoveClient_FromThread(String _CLientId)
         {
             try
             {
@@ -562,8 +563,8 @@ namespace BlockAPPRunner
             }
         }
 
-        
-        private void RequestNewConnectionCredentials(String _ClientId)
+
+        static void RequestNewConnectionCredentials(String _ClientId)
         {
             try
             {
@@ -590,7 +591,7 @@ namespace BlockAPPRunner
             catch { }
         }
 
-        private void SendMessageOfClientDisconnect(String _ClientId)
+        static void SendMessageOfClientDisconnect(String _ClientId)
         {
             try
             {
@@ -608,106 +609,7 @@ namespace BlockAPPRunner
         }
 
       
-
-        #region WEB CONTROL
-        private bool BrowserVersion()
-        {
-            Debug.WriteLine("CommunicationsDisplay.Version: " + CommunicationsDisplay.Version.ToString());
-
-            if (CommunicationsDisplay.Version.Major < 9)
-            {
-                MessageBox.Show(this, "You must update your web browser to Internet Explorer 9 or greater to see the service output information!", "Message", MessageBoxButtons.OK);
-                return false;
-            }
-
-            return true;
-        }
-
-        private delegate void OnCommunicationsDelegate(string str, INK iNK);
-        private void OnCommunications(string str, INK iNK)
-        {
-            if (ValidBrowser == false)
-            {
-                System.Diagnostics.Debug.WriteLine("INVALID BROWSER, must update Internet Explorer to version 8 or better!!");
-                return;
-            }
-            Int32 line = 0;
-            //System.Diagnostics.Debug.WriteLine("~~~~~~ OnCommunications 1:");
-            try
-            {
-                if (InvokeRequired)
-                {
-                    this.Invoke(new OnCommunicationsDelegate(OnCommunications), new object[] { str, iNK });
-                    return;
-                }
-
-                //  System.Diagnostics.Debug.WriteLine("~~~~~~ OnCommunications 2");
-                HtmlDocument doc = CommunicationsDisplay.Document;
-                line = 1;
-                //System.Diagnostics.Debug.WriteLine("~~~~~~ OnCommunications 3");
-                string style = String.Empty;
-                if (iNK.Equals(INK.CLR_GREEN))
-                    style = Properties.Settings.Default.StyleGreen;
-                else if (iNK.Equals(INK.CLR_BLUE))
-                    style = Properties.Settings.Default.StyleBlue;
-                else if (iNK.Equals(INK.CLR_RED))
-                    style = Properties.Settings.Default.StyleRed;
-                else if (iNK.Equals(INK.CLR_PURPLE))
-                    style = Properties.Settings.Default.StylePurple;
-                else
-                    style = Properties.Settings.Default.StyleBlack;
-                line = 2;
-                //System.Diagnostics.Debug.WriteLine("~~~~~~ OnCommunications 4");
-                //doc.Write(String.Format("<div style=\"{0}\">{1}</div><br />", style, str));
-                doc.Write(String.Format("<div style=\"{0}\">{1}</div>", style, str));
-                //doc.Body.ScrollTop = int.MaxValue;
-                //CommunicationsDisplay.Document.Window.ScrollTo(0, int.MaxValue);
-                line = 3;
-                ScrollMessageIntoView();
-                //System.Diagnostics.Debug.WriteLine("~~~~~~ OnCommunications 5");
-                line = 4;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"EXCEPTION IN OnCommunications @ Line: {line}, {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// force the web control to the last item in the window... set to the bottom for the latest activity
-        /// </summary>
-        private void ScrollMessageIntoView()
-        {
-            // MOST IMP : processes all windows messages queue
-            System.Windows.Forms.Application.DoEvents();
-
-            if (CommunicationsDisplay.Document != null)
-            {
-                CommunicationsDisplay.Document.Window.ScrollTo(0, CommunicationsDisplay.Document.Body.ScrollRectangle.Height);
-            }
-        }
-
-        private void ClearEventAndStatusDisplays()
-        {
-            // Clear communications
-            displayReady = false;
-            CommunicationsDisplay.Navigate("about:blank");
-            while (!displayReady)
-            {
-                Application.DoEvents();
-            }
-        }
-
-        private void CommunicationsDisplay_Navigated(object sender, WebBrowserNavigatedEventArgs e)
-        {
-            //Debug.WriteLine("CommunicationsDisplay_Navigated");
-            //OnCommunications("........", INK.CLR_BLACK);
-            displayReady = true;
-        }
-        #endregion
-
-        #region UNSAFE CODE
-        // The unsafe keyword allows pointers to be used within the following method:
+        
         static unsafe void Copy(byte[] src, int srcIndex, byte[] dst, int dstIndex, int count)
         {
             try
@@ -715,6 +617,7 @@ namespace BlockAPPRunner
                 if (src == null || srcIndex < 0 || dst == null || dstIndex < 0 || count < 0)
                 {
                     Console.WriteLine("Serious Error in the Copy function 1");
+                    // ToDO
                     throw new System.ArgumentException();
                 }
 
@@ -723,25 +626,22 @@ namespace BlockAPPRunner
                 if (srcLen - srcIndex < count || dstLen - dstIndex < count)
                 {
                     Console.WriteLine("Serious Error in the Copy function 2");
+                    // ToDO
                     throw new System.ArgumentException();
                 }
-
-                // The following fixed statement pins the location of the src and dst objects
-                // in memory so that they will not be moved by garbage collection.
+                
                 fixed (byte* pSrc = src, pDst = dst)
                 {
                     byte* ps = pSrc + srcIndex;
                     byte* pd = pDst + dstIndex;
-
-                    // Loop over the count in blocks of 4 bytes, copying an integer (4 bytes) at a time:
+                    
                     for (int i = 0; i < count / 4; i++)
                     {
                         *((int*)pd) = *((int*)ps);
                         pd += 4;
                         ps += 4;
                     }
-
-                    // Complete the copy by moving any bytes that weren't moved in blocks of 4:
+                    
                     for (int i = 0; i < count % 4; i++)
                     {
                         *pd = *ps;
@@ -752,21 +652,8 @@ namespace BlockAPPRunner
             }
             catch (Exception ex)
             {
-                var exceptionMessage = (ex.InnerException != null) ? ex.InnerException.Message : ex.Message;
-                Debug.WriteLine("EXCEPTION IN: Copy - " + exceptionMessage);
+                // ToDo
             }
-
         }
-        #endregion
-
-
-        /*******************************************************/
-        /// <summary>
-        /// TCPiP server
-        /// </summary>
-
-        static AutoResetEvent autoEvent;//mutex
-        static AutoResetEvent autoEvent2;//mutex
-        /*******************************************************/
     }
 }

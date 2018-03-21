@@ -49,7 +49,7 @@ namespace BlockAPP_Core.Core.Network
 
             var _BlockJSON = JsonConvert.SerializeObject(_Packet);
             var _BlockHash = Hashing.GetHashForString(_BlockJSON);
-            _Packet.Signature = RSA.Sign(_BlockHash, _Key); // ToDo
+            _Packet.Signature = RSA.Sign(_BlockHash, _Key).ToCharArray();
 
             return _Packet;
         }
