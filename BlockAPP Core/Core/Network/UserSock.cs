@@ -12,13 +12,11 @@ namespace BlockAPP_Core.Core.Network
             Id = _Guid;
             UserSocket = _Sock;
             UserListentingPort = 9998;//default
-            AlternateIP = String.Empty;
         }
 
         public String Id { get; private set; } 
         public Socket UserSocket { get; private set; }
         public UInt16 UserListentingPort { get; set; }
-        public String AlternateIP { get; set; }
 
         public DateTime AddedDate { get; set; }
         public Boolean Accepted { get; set; }

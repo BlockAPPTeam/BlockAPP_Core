@@ -16,37 +16,22 @@ namespace BlockAPP_Core.Core.Network
         private Socket _MainSocket;
         public Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
 
-
-        public List<PeerConnection> _Peers = new List<PeerConnection>();
-
-        public Boolean IsListening
+        public Server(int _Port)
         {
-            get
-            {
-                if (_MainSocket == null)
-                    return false;
-                else
-                    return _MainSocket.IsBound;
-            }
+            autoEvent = new AutoResetEvent(false); //the RawPacket data mutex
+            autoEvent2 = new AutoResetEvent(false);//the FullPacket data mutex
+            DataProcessThread = new Thread(NormalizeThePackets);
+            FullPacketDataProcessThread = new Thread(ProcessRecievedData);
+
+            _MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            _MainSocket.Bind(new IPEndPoint(IPAddress.Any, _Port));
+            _MainSocket.Listen(100);
+            _MainSocket.BeginAccept(new AsyncCallback(OnReceiveConnection), null);
+
+            DataProcessThread.Start();
+            FullPacketDataProcessThread.Start();
         }
 
-
-        public void Start(int _Port)
-        {
-            try
-            {
-                Stop();
-
-                _MainSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                _MainSocket.Bind(new IPEndPoint(IPAddress.Any, _Port));
-                _MainSocket.Listen(100);
-                _MainSocket.BeginAccept(new AsyncCallback(OnReceiveConnection), null);
-            }
-            catch (SocketException ex)
-            {
-                // ToDo
-            }
-        }
         public void Stop()
         {
             lock (_WorkerSockets)
@@ -58,23 +43,30 @@ namespace BlockAPP_Core.Core.Network
                 _WorkerSockets.Clear();
             }
 
-            if (IsListening) _MainSocket.Close();
+            if (_MainSocket.IsBound) _MainSocket.Close();
         }
 
         
 
         public void Connect(IPAddress address, int port)
         {
+            var _NewId = Guid.NewGuid().ToString();
             try
             {
-                //_clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                //_clientSocket.Connect(new IPEndPoint(address, port));
+                var _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                _clientSocket.Connect(new IPEndPoint(address, port));
+                lock (_WorkerSockets)
+                {
+                    UserSock _US = new UserSock(_NewId, _clientSocket);
+                    _WorkerSockets.Add(_NewId, _US);
+                }
 
-                //if (_clientSocket.Connected)
-                //    WaitForData();
+
+                NewClientConnected(_NewId);
+
+                WaitForData(_NewId);
             }
-
-            catch (SocketException se)
+            catch (ObjectDisposedException)
             {
                 // ToDo
             }
@@ -293,34 +285,10 @@ namespace BlockAPP_Core.Core.Network
 
         static AutoResetEvent autoEvent;//mutex
         static AutoResetEvent autoEvent2;//mutex
-        static void StartServer()
-        {
-            //try
-            //{
-            //    autoEvent = new AutoResetEvent(false); //the RawPacket data mutex
-            //    autoEvent2 = new AutoResetEvent(false);//the FullPacket data mutex
-            //    DataProcessThread = new Thread(NormalizeThePackets);
-            //    FullPacketDataProcessThread = new Thread(ProcessRecievedData);
 
-            //    //Create HostServer
-            //    _Server = new Server();
-
-            //    _Server.Start(ServerPort);//MySettings.HostPort);
-            //    _Server.OnReceiveData += new Server.ReceiveDataCallback(OnDataReceived);
-            //    _Server.OnClientConnect += new Server.ClientConnectCallback(NewClientConnected);
-            //    _Server.OnClientDisconnect += new Server.ClientDisconnectCallback(ClientDisconnect);
-
-            //    DataProcessThread.Start();
-            //    FullPacketDataProcessThread.Start();
-            //}
-            //catch (Exception ex)
-            //{
-            //    // ToDo
-            //}
-        }
         void NormalizeThePackets()
         {
-            while (IsListening)
+            while (_MainSocket.IsBound)
             {
                 autoEvent.WaitOne(10000);
 
@@ -407,7 +375,7 @@ namespace BlockAPP_Core.Core.Network
         }
         void ProcessRecievedData()
         {
-            while (IsListening)
+            while (_MainSocket.IsBound)
             {
                 autoEvent2.WaitOne();
 

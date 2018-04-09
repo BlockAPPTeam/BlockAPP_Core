@@ -40,14 +40,17 @@ namespace BlockAPPRunner
 
 
 
+                Server _Server = new Server(10000);
 
+                Server _Server2 = new Server(10001);
 
+                _Server.Connect(IPAddress.Parse(Networking.GetLocalIP()), 10001);
 
-                StartServer();
+                //StartServer();
 
-                timerGarbagePatrol = new Timer(GardageTimerAction);
-                timerGarbagePatrol.Change(0, 600000);
-                
+                //timerGarbagePatrol = new Timer(GardageTimerAction);
+                //timerGarbagePatrol.Change(0, 600000);
+
                 Console.ReadLine();
             }
         }
