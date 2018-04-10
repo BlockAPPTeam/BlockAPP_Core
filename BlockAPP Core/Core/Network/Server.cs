@@ -425,6 +425,11 @@ namespace BlockAPP_Core.Core.Network
                                     // ToDo
                                 }
                                 break;
+                            case (UInt16)PacketType.TYPE_RequestCredentials:
+                                {
+                                    SendCredentials(_NewFullPacket.ClientId);
+                                }
+                                break;
                         }
                     }
                 }
@@ -444,6 +449,27 @@ namespace BlockAPP_Core.Core.Network
             }
         }
 
+        void SendCredentials(String ClientId)
+        {
+            try
+            {
+                PacketData xdata = new PacketData();
+
+                xdata.Packet_Type = (UInt16)PacketType.TYPE_MyCredentials;
+                xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
+
+                xdata.PublicKey = _PublicKey.ToCharArray();
+
+                xdata.SignPacket(_PrivateKey);
+
+                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
+                SendMessage(ClientId, _Data);
+            }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+        }
         void PostUserCredentials(String ClientId, Byte[] _Data)
         {
             try
