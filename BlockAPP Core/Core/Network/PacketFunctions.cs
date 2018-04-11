@@ -47,7 +47,7 @@ namespace BlockAPP_Core.Core.Network
         {
             var _Timestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
             _Packet.Timestamp = (uint)_Timestamp;
-            _Packet.PublicKey = Config.PublicKey.ToCharArray();
+            _Packet.PublicKey = SoftConfigs._LocalConfig.PublicKey.ToCharArray();
 
             var _BlockJSON = JsonConvert.SerializeObject(_Packet);
             var _BlockHash = Hashing.GetHashForString(_BlockJSON);

@@ -7,7 +7,7 @@ namespace BlockAPP_Core.Helpers
     {
         public static UInt64 GetCurrentSlotNumber()
         {
-            var _Spended = SoftConfigs._StartDelegates - DateTime.Now;
+            var _Spended = SoftConfigs.StartDelegates - DateTime.Now;
             return (UInt64)Math.Floor(_Spended.TotalSeconds / SoftConfigs.BlockInterval);
         }
 

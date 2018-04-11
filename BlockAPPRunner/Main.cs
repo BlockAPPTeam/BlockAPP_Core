@@ -36,9 +36,14 @@ namespace BlockAPPRunner
 
                 //BlockAPP_Core.Helpers.RSA.GenerateKeyPair();
 
-                //BlockAPP_Core.Db.DbContextManager.InitConnection();
+                BlockAPP_Core.Db.DbContextManager.InitConnection();
+                var _TestKeys = RSA.GenerateKeyPair();
 
-
+                BlockAPP_Core.SoftConfigs._LocalConfig = new BlockAPP_Core.Models.Config
+                {
+                    PrivateKey = _TestKeys.PriveteKey,
+                    PublicKey = _TestKeys.PublicKey
+                };
 
                 Server _Server = new Server(10000);
 
