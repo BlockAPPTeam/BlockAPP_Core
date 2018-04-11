@@ -11,14 +11,11 @@ namespace BlockAPP_Core.Core.Network
         {
             Id = _Guid;
             UserSocket = _Sock;
-            UserListentingPort = 9998;//default
         }
 
         public String Id { get; private set; } 
         public Socket UserSocket { get; private set; }
-        public UInt16 UserListentingPort { get; set; }
 
-        public DateTime AddedDate { get; set; }
         public Boolean Accepted { get; set; }
         public String PublicKey { get; set; }
         public String Signature { get; set; }

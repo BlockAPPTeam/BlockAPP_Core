@@ -46,7 +46,7 @@ namespace BlockAPP_Core.Core.Network
             if (_MainSocket.IsBound) _MainSocket.Close();
         }
 
-        
+
 
         public void Connect(IPAddress address, int port)
         {
@@ -123,6 +123,112 @@ namespace BlockAPP_Core.Core.Network
 
 
 
+
+
+
+        int ServerPort = 100000;
+
+
+        Timer timerGarbagePatrol;
+
+        Thread DataProcessThread = null;
+        Thread FullPacketDataProcessThread = null;
+        Dictionary<String, MotherRawPackets> _ClientsRawPackets = new Dictionary<string, MotherRawPackets>();
+        Queue<FullPacket> _FullPackets = new Queue<FullPacket>();
+
+        static Boolean _Close = false;
+
+        static AutoResetEvent autoEvent;//mutex
+        static AutoResetEvent autoEvent2;//mutex
+
+
+        #region Server Core
+        void NormalizeThePackets()
+        {
+            while (_MainSocket.IsBound)
+            {
+                autoEvent.WaitOne(10000);
+
+                lock (_ClientsRawPackets)
+                {
+                    foreach (var _MRawPacket in _ClientsRawPackets.Values)
+                    {
+                        if (_MRawPacket.GetItemCount == 0) continue;
+
+                        try
+                        {
+                            Byte[] _PacketStorage = new byte[360448];//good for 10 full packets + 1 remainder
+
+                            RawPackets _NewRawPacket;
+
+                            while (true)
+                            {
+                                if (_MRawPacket.GetItemCount == 0)
+                                    break;
+
+                                int _HoldLength = 0;
+
+                                if (_MRawPacket.BytesRemaining > 0)
+                                {
+                                    Helpers.UnsafeMethods.Copy(_MRawPacket.Remainder, 0, _PacketStorage, 0, _MRawPacket.BytesRemaining);
+                                }
+                                _HoldLength = _MRawPacket.BytesRemaining;
+
+                                for (int i = 0; i < 10; i++)
+                                {
+                                    _NewRawPacket = _MRawPacket.GetTopItem;
+                                    Helpers.UnsafeMethods.Copy(_NewRawPacket.DataChunk, 0, _PacketStorage, _HoldLength, _NewRawPacket.DataLength);
+                                    _HoldLength += _NewRawPacket.DataLength;
+
+                                    if (_MRawPacket.GetItemCount == 0)
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                int _ActualPackets = 0;
+
+                                #region PACKET_SIZE 32768
+                                if (_HoldLength >= 32768)//make sure we have at least one packet in there
+                                {
+                                    _ActualPackets = _HoldLength / 32768;
+                                    _MRawPacket.BytesRemaining = _HoldLength - (_ActualPackets * 32768);
+
+                                    for (int i = 0; i < _ActualPackets; i++)
+                                    {
+                                        Byte[] _Temp = new byte[32768];
+                                        Helpers.UnsafeMethods.Copy(_PacketStorage, i * 32768, _Temp, 0, 32768);
+                                        lock (_FullPackets)
+                                        {
+                                            _FullPackets.Enqueue(new FullPacket(_MRawPacket.ClientId, _Temp));
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    _MRawPacket.BytesRemaining = _HoldLength;
+                                }
+
+                                Helpers.UnsafeMethods.Copy(_PacketStorage, _ActualPackets * 32768, _MRawPacket.Remainder, 0, _MRawPacket.BytesRemaining);
+                                #endregion
+
+                                if (_FullPackets.Count > 0)
+                                {
+                                    autoEvent2.Set();
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _MRawPacket.ClearList();
+                            // ToDo
+                        }
+                    }
+                }
+
+                if (_Close) break;
+            }
+        }
         void NewClientConnected(String _CLientId)
         {
             try
@@ -149,9 +255,7 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
-
-
-        private void OnReceiveConnection(IAsyncResult _Asunc)
+        void OnReceiveConnection(IAsyncResult _Asunc)
         {
             var _NewId = Guid.NewGuid().ToString();
             try
@@ -188,7 +292,7 @@ namespace BlockAPP_Core.Core.Network
                 ClientDisconnect(_NewId);
             }
         }
-        private void WaitForData(String _Guid)
+        void WaitForData(String _Guid)
         {
             if (!_WorkerSockets.ContainsKey(_Guid))
             {
@@ -213,7 +317,7 @@ namespace BlockAPP_Core.Core.Network
                 ClientDisconnect(_Guid);
             }
         }
-        private void OnDataReceived(IAsyncResult _Asunc)
+        void OnDataReceived(IAsyncResult _Asunc)
         {
             ServerPacket _SocketData = (ServerPacket)_Asunc.AsyncState;
 
@@ -233,7 +337,12 @@ namespace BlockAPP_Core.Core.Network
                 }
                 else
                 {
-                    OnDataReceived(_SocketData.Guid, _SocketData.DataBuffer, _DataSize);
+                    if (_ClientsRawPackets.ContainsKey(_SocketData.Guid))
+                    {
+                        _ClientsRawPackets[_SocketData.Guid].AddToList(_SocketData.DataBuffer, _DataSize);
+
+                        autoEvent.Set();
+                    }
 
                     _WorkerSockets[_SocketData.Guid]._ZeroDataCount = 0;
                 }
@@ -269,110 +378,6 @@ namespace BlockAPP_Core.Core.Network
             }
         }
 
-
-
-        int ServerPort = 100000;
-
-        
-        Timer timerGarbagePatrol;
-
-        Thread DataProcessThread = null;
-        Thread FullPacketDataProcessThread = null;
-        Dictionary<String, MotherRawPackets> _ClientsRawPackets = new Dictionary<string, MotherRawPackets>();
-        Queue<FullPacket> _FullPackets = new Queue<FullPacket>();
-
-        static Boolean _Close = false;
-
-        static AutoResetEvent autoEvent;//mutex
-        static AutoResetEvent autoEvent2;//mutex
-
-        void NormalizeThePackets()
-        {
-            while (_MainSocket.IsBound)
-            {
-                autoEvent.WaitOne(10000);
-
-                lock (_ClientsRawPackets)
-                {
-                    foreach (var _MRawPacket in _ClientsRawPackets.Values)
-                    {
-                        if (_MRawPacket.GetItemCount == 0) continue;
-
-                        try
-                        {
-                            Byte[] _PacketStorage = new byte[360448];//good for 10 full packets + 1 remainder
-
-                            RawPackets _NewRawPacket;
-
-                            while (true)
-                            {
-                                if (_MRawPacket.GetItemCount == 0)
-                                    break;
-
-                                int _HoldLength = 0;
-
-                                if (_MRawPacket.BytesRemaining > 0)
-                                {
-                                    Copy(_MRawPacket.Remainder, 0, _PacketStorage, 0, _MRawPacket.BytesRemaining);
-                                }
-                                _HoldLength = _MRawPacket.BytesRemaining;
-
-                                for (int i = 0; i < 10; i++)
-                                {
-                                    _NewRawPacket = _MRawPacket.GetTopItem;
-                                    Copy(_NewRawPacket.DataChunk, 0, _PacketStorage, _HoldLength, _NewRawPacket.DataLength);
-                                    _HoldLength += _NewRawPacket.DataLength;
-
-                                    if (_MRawPacket.GetItemCount == 0)
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                int _ActualPackets = 0;
-
-                                #region PACKET_SIZE 32768
-                                if (_HoldLength >= 32768)//make sure we have at least one packet in there
-                                {
-                                    _ActualPackets = _HoldLength / 32768;
-                                    _MRawPacket.BytesRemaining = _HoldLength - (_ActualPackets * 32768);
-
-                                    for (int i = 0; i < _ActualPackets; i++)
-                                    {
-                                        Byte[] _Temp = new byte[32768];
-                                        Copy(_PacketStorage, i * 32768, _Temp, 0, 32768);
-                                        lock (_FullPackets)
-                                        {
-                                            _FullPackets.Enqueue(new FullPacket(_MRawPacket.ClientId, _Temp));
-                                        }
-                                    }
-                                }
-                                else
-                                {
-                                    _MRawPacket.BytesRemaining = _HoldLength;
-                                }
-
-                                Copy(_PacketStorage, _ActualPackets * 32768, _MRawPacket.Remainder, 0, _MRawPacket.BytesRemaining);
-                                #endregion
-
-                                if (_FullPackets.Count > 0)
-                                {
-                                    autoEvent2.Set();
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            _MRawPacket.ClearList();
-                            //string msg = (ex.InnerException == null) ? ex.Message : ex.InnerException.Message;
-                            // ToDo
-                        }
-                    }
-                }
-
-                if (_Close) break;
-            }
-        }
         void ProcessRecievedData()
         {
             while (_MainSocket.IsBound)
@@ -394,7 +399,7 @@ namespace BlockAPP_Core.Core.Network
                         {
                             case (UInt16)PacketType.TYPE_MyCredentials:
                                 {
-                                    PostUserCredentials(_NewFullPacket.ClientId, _NewFullPacket.Data);
+                                    CheckUserCredentials(_NewFullPacket.ClientId, _NewFullPacket.Data);
                                 }
                                 break;
                             case (UInt16)PacketType.TYPE_Close:
@@ -448,27 +453,9 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
+        #endregion
 
-        void SendCredentials(String ClientId)
-        {
-            try
-            {
-                PacketData xdata = new PacketData();
-
-                xdata.Packet_Type = (UInt16)PacketType.TYPE_MyCredentials;
-                xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
-
-                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
-
-                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-                SendMessage(ClientId, _Data, PacketType.TYPE_MyCredentials);
-            }
-            catch (Exception ex)
-            {
-                // ToDo
-            }
-        }
-        void PostUserCredentials(String ClientId, Byte[] _Data)
+        void CheckUserCredentials(String ClientId, Byte[] _Data)
         {
             try
             {
@@ -479,10 +466,10 @@ namespace BlockAPP_Core.Core.Network
                 {
                     if (PacketFunctions.Verify(IncomingData))
                     {
-                       _WorkerSockets[ClientId].Timestamp = IncomingData.Timestamp;
-                       _WorkerSockets[ClientId].Accepted = true;
+                        _WorkerSockets[ClientId].Timestamp = IncomingData.Timestamp;
+                        _WorkerSockets[ClientId].Accepted = true;
                         _WorkerSockets[ClientId].Signature = IncomingData.Signature.NormalizeChars();
-                       _WorkerSockets[ClientId].PublicKey = IncomingData.PublicKey.NormalizeChars();
+                        _WorkerSockets[ClientId].PublicKey = IncomingData.PublicKey.NormalizeChars();
 
                         SendRegisteredMessage(ClientId);
                     }
@@ -497,22 +484,7 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
-        void SendRegisteredMessage(String ClientId)
-        {
-            try
-            {
-                PacketData xdata = new PacketData();
 
-                xdata.Packet_Type = (UInt16)PacketType.TYPE_Registered;
-                xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
-
-                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
-
-                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-                SendMessage(ClientId, _Data, PacketType.TYPE_Registered);
-            }
-            catch { }
-        }
 
         StringBuilder _SB;
         void AssembleMessage(String _ClientID, Byte[] _Data)
@@ -563,7 +535,7 @@ namespace BlockAPP_Core.Core.Network
 
 
 
-        public  void GardageTimerAction(Object stateInfo)
+        public void GardageTimerAction(Object stateInfo)
         {
             try
             {
@@ -572,22 +544,22 @@ namespace BlockAPP_Core.Core.Network
             catch { }
         }
 
-         void ShotdownServer()
+        void ShotdownServer()
         {
-                PacketData xdata = new PacketData();
+            PacketData xdata = new PacketData();
 
-                xdata.Packet_Type = (UInt16)PacketType.TYPE_HostExiting;
-                xdata.Packet_SubType = 0;
-                xdata.Packet_Size = 16;
+            xdata.Packet_Type = (UInt16)PacketType.TYPE_HostExiting;
+            xdata.Packet_SubType = 0;
+            xdata.Packet_Size = 16;
 
-                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
+            Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
 
-                foreach (var C in _WorkerSockets)
-                {
-                    SendMessage(C.Key, _Data, PacketType.TYPE_HostExiting);
-                }
-                Thread.Sleep(250);
-            
+            foreach (var C in _WorkerSockets)
+            {
+                SendMessage(C.Key, _Data, PacketType.TYPE_HostExiting);
+            }
+            Thread.Sleep(250);
+
 
             _Close = true;
             try
@@ -604,7 +576,7 @@ namespace BlockAPP_Core.Core.Network
         }
 
 
-         void CheckConnectionTimersGarbagePatrol()
+        void CheckConnectionTimersGarbagePatrol()
         {
             List<String> ClientIDsToClear = new List<String>();
 
@@ -633,7 +605,7 @@ namespace BlockAPP_Core.Core.Network
             }
         }
 
-         void CleanupDeadClient(String _Guid)
+        void CleanupDeadClient(String _Guid)
         {
             try
             {
@@ -667,18 +639,10 @@ namespace BlockAPP_Core.Core.Network
 
 
 
-         void OnDataReceived(String _ClientId, Byte[] _Data, int _Size)
-        {
-            if (_ClientsRawPackets.ContainsKey(_ClientId))
-            {
-                _ClientsRawPackets[_ClientId].AddToList(_Data, _Size);
-
-                autoEvent.Set();
-            }
-        }
+    
 
 
-         void SetNewConnectionData_FromThread(String _CLientId)
+        void SetNewConnectionData_FromThread(String _CLientId)
         {
             try
             {
@@ -701,7 +665,7 @@ namespace BlockAPP_Core.Core.Network
 
 
 
-         void ClientDisconnect(String _CLientId)
+        void ClientDisconnect(String _CLientId)
         {
             if (_Close) return;
 
@@ -723,7 +687,7 @@ namespace BlockAPP_Core.Core.Network
 
             try
             {
-                RemoveClient_FromThread(_CLientId);
+                SendMessageOfClientDisconnect(_CLientId);
             }
             catch (Exception ex)
             {
@@ -736,20 +700,9 @@ namespace BlockAPP_Core.Core.Network
             Thread.Sleep(10);
         }
 
-         void RemoveClient_FromThread(String _CLientId)
-        {
-            try
-            {
-                SendMessageOfClientDisconnect(_CLientId);
-            }
-            catch (Exception ex)
-            {
-                // ToDo
-            }
-        }
+        #region System Message send method
 
-
-         void RequestNewConnectionCredentials(String _ClientId)
+        void RequestNewConnectionCredentials(String _ClientId)
         {
             try
             {
@@ -773,10 +726,47 @@ namespace BlockAPP_Core.Core.Network
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+        }
+        void SendCredentials(String ClientId)
+        {
+            try
+            {
+                PacketData xdata = new PacketData();
+
+                xdata.Packet_Type = (UInt16)PacketType.TYPE_MyCredentials;
+                xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
+
+                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
+
+                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
+                SendMessage(ClientId, _Data, PacketType.TYPE_MyCredentials);
+            }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+        }
+        void SendRegisteredMessage(String ClientId)
+        {
+            try
+            {
+                PacketData xdata = new PacketData();
+
+                xdata.Packet_Type = (UInt16)PacketType.TYPE_Registered;
+                xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
+
+                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
+
+                Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
+                SendMessage(ClientId, _Data, PacketType.TYPE_Registered);
+            }
             catch { }
         }
-
-         void SendMessageOfClientDisconnect(String _ClientId)
+        void SendMessageOfClientDisconnect(String _ClientId)
         {
             try
             {
@@ -787,58 +777,13 @@ namespace BlockAPP_Core.Core.Network
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
                 SendMessage(_ClientId, _Data, PacketType.TYPE_ClientDisconnecting);
-
-                // ToDo зачем?
-            }
-            catch { }
-        }
-
-
-
-        unsafe void Copy(byte[] src, int srcIndex, byte[] dst, int dstIndex, int count)
-        {
-            try
-            {
-                if (src == null || srcIndex < 0 || dst == null || dstIndex < 0 || count < 0)
-                {
-                    Console.WriteLine("Serious Error in the Copy function 1");
-                    // ToDO
-                    throw new System.ArgumentException();
-                }
-
-                int srcLen = src.Length;
-                int dstLen = dst.Length;
-                if (srcLen - srcIndex < count || dstLen - dstIndex < count)
-                {
-                    Console.WriteLine("Serious Error in the Copy function 2");
-                    // ToDO
-                    throw new System.ArgumentException();
-                }
-
-                fixed (byte* pSrc = src, pDst = dst)
-                {
-                    byte* ps = pSrc + srcIndex;
-                    byte* pd = pDst + dstIndex;
-
-                    for (int i = 0; i < count / 4; i++)
-                    {
-                        *((int*)pd) = *((int*)ps);
-                        pd += 4;
-                        ps += 4;
-                    }
-
-                    for (int i = 0; i < count % 4; i++)
-                    {
-                        *pd = *ps;
-                        pd++;
-                        ps++;
-                    }
-                }
             }
             catch (Exception ex)
             {
                 // ToDo
             }
         }
+
+        #endregion
     }
 }
