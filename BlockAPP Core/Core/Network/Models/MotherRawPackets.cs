@@ -10,7 +10,7 @@ namespace BlockAPP_Core.Core.Network.Models
         {
             ClientId = _ClientId;
             RawPacketsList = new Queue<RawPackets>();
-            Remainder = new byte[1024];
+            Remainder = new byte[32768];
 
             BytesRemaining = 0;
         }

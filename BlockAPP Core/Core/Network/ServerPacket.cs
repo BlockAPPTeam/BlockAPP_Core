@@ -9,7 +9,7 @@ namespace BlockAPP_Core.Core.Network
     {
         public Socket CurrentSocket;
         public String Guid;
-        public Byte[] DataBuffer = new byte[1024];
+        public Byte[] DataBuffer = new byte[32768];
       
         public ServerPacket(Socket _Sock, String _Guid)
         {

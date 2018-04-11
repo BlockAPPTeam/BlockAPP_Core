@@ -26,10 +26,10 @@ namespace BlockAPP_Core.Core.Network.Models
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 392)]
         public Char[] PublicKey = new Char[392];
 
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 618)]
-        public Char[] Data = new Char[618];
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32022)]
+        public Char[] Data = new Char[32022];
 
-        //300 + 300 + 618 + 6 = 1224
+        //344 + 392 + 6 + 4 + 32022 = 32768
 
     }
 }

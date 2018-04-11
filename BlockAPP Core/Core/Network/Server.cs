@@ -300,7 +300,7 @@ namespace BlockAPP_Core.Core.Network
 
                         try
                         {
-                            Byte[] _PacketStorage = new byte[11264];//good for 10 full packets(10240) + 1 remainder(1024)
+                            Byte[] _PacketStorage = new byte[360448];//good for 10 full packets + 1 remainder
 
                             RawPackets _NewRawPacket;
 
@@ -331,16 +331,16 @@ namespace BlockAPP_Core.Core.Network
 
                                 int _ActualPackets = 0;
 
-                                #region PACKET_SIZE 1024
-                                if (_HoldLength >= 1024)//make sure we have at least one packet in there
+                                #region PACKET_SIZE 32768
+                                if (_HoldLength >= 32768)//make sure we have at least one packet in there
                                 {
-                                    _ActualPackets = _HoldLength / 1024;
-                                    _MRawPacket.BytesRemaining = _HoldLength - (_ActualPackets * 1024);
+                                    _ActualPackets = _HoldLength / 32768;
+                                    _MRawPacket.BytesRemaining = _HoldLength - (_ActualPackets * 32768);
 
                                     for (int i = 0; i < _ActualPackets; i++)
                                     {
-                                        Byte[] _Temp = new byte[1024];
-                                        Copy(_PacketStorage, i * 1024, _Temp, 0, 1024);
+                                        Byte[] _Temp = new byte[32768];
+                                        Copy(_PacketStorage, i * 32768, _Temp, 0, 32768);
                                         lock (_FullPackets)
                                         {
                                             _FullPackets.Enqueue(new FullPacket(_MRawPacket.ClientId, _Temp));
@@ -352,7 +352,7 @@ namespace BlockAPP_Core.Core.Network
                                     _MRawPacket.BytesRemaining = _HoldLength;
                                 }
 
-                                Copy(_PacketStorage, _ActualPackets * 1024, _MRawPacket.Remainder, 0, _MRawPacket.BytesRemaining);
+                                Copy(_PacketStorage, _ActualPackets * 32768, _MRawPacket.Remainder, 0, _MRawPacket.BytesRemaining);
                                 #endregion
 
                                 if (_FullPackets.Count > 0)
