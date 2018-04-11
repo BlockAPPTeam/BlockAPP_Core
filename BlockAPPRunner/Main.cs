@@ -53,8 +53,7 @@ namespace BlockAPPRunner
 
                 //StartServer();
 
-                //timerGarbagePatrol = new Timer(GardageTimerAction);
-                //timerGarbagePatrol.Change(0, 600000);
+        
 
                 Console.ReadLine();
             }

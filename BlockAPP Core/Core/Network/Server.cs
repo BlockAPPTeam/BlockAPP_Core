@@ -14,7 +14,18 @@ namespace BlockAPP_Core.Core.Network
     public class Server
     {
         private Socket _MainSocket;
-        public Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
+
+        Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
+        Dictionary<String, MotherRawPackets> _ClientsRawPackets = new Dictionary<string, MotherRawPackets>();
+        Queue<FullPacket> _FullPackets = new Queue<FullPacket>();
+
+        Timer CleanUpTimer;
+        Thread DataProcessThread = null;
+        Thread FullPacketDataProcessThread = null;
+
+        Boolean _Close = false;
+        AutoResetEvent autoEvent;//mutex
+        AutoResetEvent autoEvent2;//mutex
 
         public Server(int _Port)
         {
@@ -30,8 +41,10 @@ namespace BlockAPP_Core.Core.Network
 
             DataProcessThread.Start();
             FullPacketDataProcessThread.Start();
-        }
 
+            CleanUpTimer = new Timer(CleanConnections);
+            CleanUpTimer.Change(0, 30000);
+        }
         public void Stop()
         {
             lock (_WorkerSockets)
@@ -44,9 +57,10 @@ namespace BlockAPP_Core.Core.Network
             }
 
             if (_MainSocket.IsBound) _MainSocket.Close();
+
+            CleanUpTimer.Dispose();
         }
-
-
+        
 
         public void Connect(IPAddress address, int port)
         {
@@ -72,39 +86,6 @@ namespace BlockAPP_Core.Core.Network
             }
         }
 
-
-        public void SendMessageToAll(Byte[] _Data)
-        {
-            List<String> _ClientsToRemove = new List<String>();
-            foreach (var _Guid in _WorkerSockets.Keys)
-            {
-                if (_WorkerSockets[_Guid].UserSocket.Connected)
-                {
-                    try
-                    {
-                        _WorkerSockets[_Guid].UserSocket.Send(_Data);
-                    }
-                    catch
-                    {
-                        _ClientsToRemove.Add(_Guid);
-                    }
-
-                    Thread.Sleep(10);// this is for a client Ping so stagger the send messages
-                }
-                else
-                {
-                    _ClientsToRemove.Add(_Guid);
-                }
-            }
-
-            if (_ClientsToRemove.Any())
-            {
-                foreach (var _Guid in _ClientsToRemove)
-                {
-                    ClientDisconnect(_Guid);
-                }
-            }
-        }
         public void SendMessage(String _Guid, Byte[] _Data, PacketType _Type)
         {
             try
@@ -124,23 +105,52 @@ namespace BlockAPP_Core.Core.Network
 
 
 
+        StringBuilder _SB;
+        void AssembleMessage(String _ClientID, Byte[] _Data)
+        {
+            try
+            {
+                PacketData IncomingData = new PacketData();
+                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
 
+                if (IncomingData.Verify() == false) return;
 
-        int ServerPort = 100000;
+                switch (IncomingData.Packet_SubType)
+                {
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageStart:
+                        {
+                            if (_WorkerSockets.ContainsKey(_ClientID))
+                            {
+                                _SB = new StringBuilder(PacketFunctions.NormalizeChars(IncomingData.Data));
+                            }
+                        }
+                        break;
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageBody:
+                        {
+                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
+                        }
+                        break;
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageEnd:
+                        {
+                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
 
+                            /****************************************************************/
+                            //Now tell the client teh message was received!
+                            PacketData _Responce = new PacketData();
+                            _Responce.Packet_Type = (UInt16)PacketType.TYPE_MessageReceived;
 
-        Timer timerGarbagePatrol;
+                            Byte[] _ResponceData = PacketFunctions.StructureToByteArray(_Responce);
 
-        Thread DataProcessThread = null;
-        Thread FullPacketDataProcessThread = null;
-        Dictionary<String, MotherRawPackets> _ClientsRawPackets = new Dictionary<string, MotherRawPackets>();
-        Queue<FullPacket> _FullPackets = new Queue<FullPacket>();
-
-        static Boolean _Close = false;
-
-        static AutoResetEvent autoEvent;//mutex
-        static AutoResetEvent autoEvent2;//mutex
-
+                            SendMessage(_ClientID, _ResponceData, PacketType.TYPE_MessageReceived);
+                        }
+                        break;
+                }
+            }
+            catch
+            {
+                // ToDo
+            }
+        }
 
         #region Server Core
         void NormalizeThePackets()
@@ -455,192 +465,7 @@ namespace BlockAPP_Core.Core.Network
         }
         #endregion
 
-        void CheckUserCredentials(String ClientId, Byte[] _Data)
-        {
-            try
-            {
-                PacketData IncomingData = new PacketData();
-                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
-
-                lock (_WorkerSockets)
-                {
-                    if (PacketFunctions.Verify(IncomingData))
-                    {
-                        _WorkerSockets[ClientId].Timestamp = IncomingData.Timestamp;
-                        _WorkerSockets[ClientId].Accepted = true;
-                        _WorkerSockets[ClientId].Signature = IncomingData.Signature.NormalizeChars();
-                        _WorkerSockets[ClientId].PublicKey = IncomingData.PublicKey.NormalizeChars();
-
-                        SendRegisteredMessage(ClientId);
-                    }
-                    else
-                    {
-                        ClientDisconnect(ClientId);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // ToDo
-            }
-        }
-
-
-        StringBuilder _SB;
-        void AssembleMessage(String _ClientID, Byte[] _Data)
-        {
-            try
-            {
-                PacketData IncomingData = new PacketData();
-                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
-
-                if (IncomingData.Verify() == false) return;
-
-                switch (IncomingData.Packet_SubType)
-                {
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageStart:
-                        {
-                            if (_WorkerSockets.ContainsKey(_ClientID))
-                            {
-                                _SB = new StringBuilder(PacketFunctions.NormalizeChars(IncomingData.Data));
-                            }
-                        }
-                        break;
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageBody:
-                        {
-                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
-                        }
-                        break;
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageEnd:
-                        {
-                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
-
-                            /****************************************************************/
-                            //Now tell the client teh message was received!
-                            PacketData _Responce = new PacketData();
-                            _Responce.Packet_Type = (UInt16)PacketType.TYPE_MessageReceived;
-
-                            Byte[] _ResponceData = PacketFunctions.StructureToByteArray(_Responce);
-
-                            SendMessage(_ClientID, _ResponceData, PacketType.TYPE_MessageReceived);
-                        }
-                        break;
-                }
-            }
-            catch
-            {
-                // ToDo
-            }
-        }
-
-
-
-        public void GardageTimerAction(Object stateInfo)
-        {
-            try
-            {
-                CheckConnectionTimersGarbagePatrol();
-            }
-            catch { }
-        }
-
-        void ShotdownServer()
-        {
-            PacketData xdata = new PacketData();
-
-            xdata.Packet_Type = (UInt16)PacketType.TYPE_HostExiting;
-            xdata.Packet_SubType = 0;
-            xdata.Packet_Size = 16;
-
-            Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-
-            foreach (var C in _WorkerSockets)
-            {
-                SendMessage(C.Key, _Data, PacketType.TYPE_HostExiting);
-            }
-            Thread.Sleep(250);
-
-
-            _Close = true;
-            try
-            {
-                if (timerGarbagePatrol != null)
-                {
-                    timerGarbagePatrol.Dispose();
-                    timerGarbagePatrol = null;
-                }
-            }
-            catch { }
-
-            Stop();
-        }
-
-
-        void CheckConnectionTimersGarbagePatrol()
-        {
-            List<String> ClientIDsToClear = new List<String>();
-
-            lock (_WorkerSockets)
-            {
-                foreach (var _Sock in _WorkerSockets.Values)
-                {
-                    TimeSpan diff = DateTime.Now - PacketFunctions.UnixTimeStampToDateTime(_Sock.Timestamp);
-
-                    if (diff.TotalSeconds >= 60 || _Sock.UserSocket.Connected == false)//10 minutes
-                    {
-                        ClientIDsToClear.Add(_Sock.Id);
-                    }
-                }
-            }
-
-            if (ClientIDsToClear.Count > 0)
-            {
-                foreach (var _Guid in ClientIDsToClear)
-                {
-                    SendMessageOfClientDisconnect(_Guid);
-
-                    CleanupDeadClient(_Guid);
-                    Thread.Sleep(5);
-                }
-            }
-        }
-
-        void CleanupDeadClient(String _Guid)
-        {
-            try
-            {
-                lock (_ClientsRawPackets)
-                {
-                    if (_ClientsRawPackets.ContainsKey(_Guid))
-                    {
-                        _ClientsRawPackets[_Guid].ClearList();
-                        _ClientsRawPackets.Remove(_Guid);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // ToDo
-            }
-
-            try
-            {
-                lock (_WorkerSockets)
-                {
-                    if (_WorkerSockets.ContainsKey(_Guid))
-                    {
-                        _WorkerSockets[_Guid].UserSocket.Close();
-                        _WorkerSockets.Remove(_Guid);
-                    }
-                }
-            }
-            catch { }
-        }
-
-
-
-    
-
+        #region System methods
 
         void SetNewConnectionData_FromThread(String _CLientId)
         {
@@ -660,11 +485,6 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
-
-
-
-
-
         void ClientDisconnect(String _CLientId)
         {
             if (_Close) return;
@@ -699,6 +519,100 @@ namespace BlockAPP_Core.Core.Network
 
             Thread.Sleep(10);
         }
+        void CleanupDeadClient(String _Guid)
+        {
+            try
+            {
+                lock (_ClientsRawPackets)
+                {
+                    if (_ClientsRawPackets.ContainsKey(_Guid))
+                    {
+                        _ClientsRawPackets[_Guid].ClearList();
+                        _ClientsRawPackets.Remove(_Guid);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+
+            try
+            {
+                lock (_WorkerSockets)
+                {
+                    if (_WorkerSockets.ContainsKey(_Guid))
+                    {
+                        _WorkerSockets[_Guid].UserSocket.Close();
+                        _WorkerSockets.Remove(_Guid);
+                    }
+                }
+            }
+            catch { }
+        }
+        void CheckUserCredentials(String ClientId, Byte[] _Data)
+        {
+            try
+            {
+                PacketData IncomingData = new PacketData();
+                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
+
+                lock (_WorkerSockets)
+                {
+                    if (PacketFunctions.Verify(IncomingData))
+                    {
+                        _WorkerSockets[ClientId].Timestamp = IncomingData.Timestamp;
+                        _WorkerSockets[ClientId].Accepted = true;
+                        _WorkerSockets[ClientId].Signature = IncomingData.Signature.NormalizeChars();
+                        _WorkerSockets[ClientId].PublicKey = IncomingData.PublicKey.NormalizeChars();
+
+                        SendRegisteredMessage(ClientId);
+                    }
+                    else
+                    {
+                        ClientDisconnect(ClientId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+        }
+        void CleanConnections(Object state)
+        {
+            try
+            {
+                List<String> ClientIDsToClear = new List<String>();
+
+                lock (_WorkerSockets)
+                {
+                    foreach (var _Sock in _WorkerSockets.Values)
+                    {
+                        TimeSpan diff = DateTime.Now - PacketFunctions.UnixTimeStampToDateTime(_Sock.Timestamp);
+
+                        if (diff.TotalSeconds >= 60 || _Sock.UserSocket.Connected == false)//10 minutes
+                        {
+                            ClientIDsToClear.Add(_Sock.Id);
+                        }
+                    }
+                }
+
+                if (ClientIDsToClear.Count > 0)
+                {
+                    foreach (var _Guid in ClientIDsToClear)
+                    {
+                        SendMessageOfClientDisconnect(_Guid);
+
+                        CleanupDeadClient(_Guid);
+                        Thread.Sleep(5);
+                    }
+                }
+            }
+            catch { }
+        }
+
+        #endregion
 
         #region System Message send method
 
