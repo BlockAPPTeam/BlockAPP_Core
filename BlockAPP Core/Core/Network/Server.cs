@@ -458,7 +458,7 @@ namespace BlockAPP_Core.Core.Network
                 xdata.Packet_Type = (UInt16)PacketType.TYPE_MyCredentials;
                 xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
 
-                xdata.SignPacket(Config.PrivateKey);
+                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
                 SendMessage(ClientId, _Data, PacketType.TYPE_MyCredentials);
@@ -506,7 +506,7 @@ namespace BlockAPP_Core.Core.Network
                 xdata.Packet_Type = (UInt16)PacketType.TYPE_Registered;
                 xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
 
-                xdata.SignPacket(Config.PrivateKey);
+                xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
                 SendMessage(ClientId, _Data, PacketType.TYPE_Registered);

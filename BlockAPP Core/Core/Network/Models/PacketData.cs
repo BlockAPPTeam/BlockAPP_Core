@@ -20,16 +20,16 @@ namespace BlockAPP_Core.Core.Network.Models
         public UInt32 Timestamp;
 
         [JsonIgnore]
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
-        public Char[] Signature = new Char[300];
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 344)]
+        public Char[] Signature = new Char[344];
         
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 300)]
-        public Char[] PublicKey = new Char[300];
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 392)]
+        public Char[] PublicKey = new Char[392];
 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 618)]
         public Char[] Data = new Char[618];
 
-        //300 + 300 + 618 + 6 = 1024
+        //300 + 300 + 618 + 6 = 1224
 
     }
 }
