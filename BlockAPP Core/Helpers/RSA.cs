@@ -9,6 +9,7 @@ using Org.BouncyCastle.X509;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -30,6 +31,10 @@ namespace BlockAPP_Core.Helpers
             Byte[] _SerializedPublicBytes = _PublicKeyInfo.ToAsn1Object().GetDerEncoded();
             String _SerializedPublic = Convert.ToBase64String(_SerializedPublicBytes);
 
+            if (Db.DbContextManager._Db.Accounts.Any(x => x.PublicKey == _SerializedPublic))
+            {
+                return GenerateKeyPair();
+            }
 
             Models.KeyPair _KP = new Models.KeyPair
             {

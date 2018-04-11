@@ -13,6 +13,8 @@ namespace BlockAPP_Core.Db.Concrete
         }
 
         public DbSet<Block> Blocks { get; set; }
+        public DbSet<Account> Accounts { get; set; }
+        public DbSet<DelegateAccount> Delegates { get; set; }
 
         //
         #region Blocks

@@ -105,12 +105,13 @@ namespace BlockAPP_Core.Core.Network
                 }
             }
         }
-        public void SendMessage(String _Guid, Byte[] _Data)
+        public void SendMessage(String _Guid, Byte[] _Data, PacketType _Type)
         {
             try
             {
                 if (_WorkerSockets.ContainsKey(_Guid))
                 {
+                    Console.WriteLine($"Server {_MainSocket.LocalEndPoint.ToString()}: Send message {_Type.ToString()} to {_Guid}");
                     _WorkerSockets[_Guid].UserSocket.Send(_Data);
                 }
             }
@@ -272,8 +273,7 @@ namespace BlockAPP_Core.Core.Network
 
         int ServerPort = 100000;
 
-
-        string _PrivateKey;
+        
         Timer timerGarbagePatrol;
 
         Thread DataProcessThread = null;
@@ -458,12 +458,10 @@ namespace BlockAPP_Core.Core.Network
                 xdata.Packet_Type = (UInt16)PacketType.TYPE_MyCredentials;
                 xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
 
-                xdata.PublicKey = _PublicKey.ToCharArray();
-
-                xdata.SignPacket(_PrivateKey);
+                xdata.SignPacket(Config.PrivateKey);
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-                SendMessage(ClientId, _Data);
+                SendMessage(ClientId, _Data, PacketType.TYPE_MyCredentials);
             }
             catch (Exception ex)
             {
@@ -508,10 +506,10 @@ namespace BlockAPP_Core.Core.Network
                 xdata.Packet_Type = (UInt16)PacketType.TYPE_Registered;
                 xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
 
-                xdata.SignPacket(_PrivateKey);
+                xdata.SignPacket(Config.PrivateKey);
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-                SendMessage(ClientId, _Data);
+                SendMessage(ClientId, _Data, PacketType.TYPE_Registered);
             }
             catch { }
         }
@@ -552,7 +550,7 @@ namespace BlockAPP_Core.Core.Network
 
                             Byte[] _ResponceData = PacketFunctions.StructureToByteArray(_Responce);
 
-                            SendMessage(_ClientID, _ResponceData);
+                            SendMessage(_ClientID, _ResponceData, PacketType.TYPE_MessageReceived);
                         }
                         break;
                 }
@@ -586,7 +584,7 @@ namespace BlockAPP_Core.Core.Network
 
                 foreach (var C in _WorkerSockets)
                 {
-                    SendMessage(C.Key, _Data);
+                    SendMessage(C.Key, _Data, PacketType.TYPE_HostExiting);
                 }
                 Thread.Sleep(250);
             
@@ -771,7 +769,7 @@ namespace BlockAPP_Core.Core.Network
 
                     if (_WorkerSockets[_ClientId].UserSocket.Connected)
                     {
-                        SendMessage(_ClientId, _Data);
+                        SendMessage(_ClientId, _Data, PacketType.TYPE_RequestCredentials);
                     }
                 }
             }
@@ -788,7 +786,7 @@ namespace BlockAPP_Core.Core.Network
                 xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
 
                 Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
-                SendMessage(_ClientId, _Data);
+                SendMessage(_ClientId, _Data, PacketType.TYPE_ClientDisconnecting);
 
                 // ToDo зачем?
             }
