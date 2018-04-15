@@ -14,6 +14,8 @@ namespace BlockAPP_Core.Core.Network
 {
     public class Server
     {
+        private static NLog.Logger _Logger = NLog.LogManager.GetCurrentClassLogger();
+
         private Socket _MainSocket;
 
         public Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
@@ -82,9 +84,9 @@ namespace BlockAPP_Core.Core.Network
 
                 WaitForData(_NewId);
             }
-            catch (ObjectDisposedException)
+            catch (Exception ex)
             {
-                // ToDo
+                _Logger.Error(ex, "Something bad happened");
             }
         }
 

@@ -38,6 +38,8 @@ namespace BlockAPPRunner
 
                 //BlockAPP_Core.Helpers.RSA.GenerateKeyPair();
 
+                Logger.InitLogger();
+
                 BlockAPP_Core.Db.DbContextManager.InitConnection();
                 var _TestKeys = RSA.GenerateKeyPair();
 
