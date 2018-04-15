@@ -1,5 +1,6 @@
 ﻿using BlockAPP_Core.Core.Network.Enums;
 using BlockAPP_Core.Core.Network.Models;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,8 +16,9 @@ namespace BlockAPP_Core.Core.Network
     {
         private Socket _MainSocket;
 
-        Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
+        public Dictionary<String, UserSock> _WorkerSockets = new Dictionary<String, UserSock>();
         Dictionary<String, MotherRawPackets> _ClientsRawPackets = new Dictionary<string, MotherRawPackets>();
+        public Dictionary<String, List<JObject>> _FinalizedMessages = new Dictionary<string, List<JObject>>();
         Queue<FullPacket> _FullPackets = new Queue<FullPacket>();
 
         Timer CleanUpTimer;
@@ -86,7 +88,41 @@ namespace BlockAPP_Core.Core.Network
             }
         }
 
-        public void SendMessage(String _Guid, Byte[] _Data, PacketType _Type)
+        public void SendData(String Data, String ClientId)
+        {
+            try
+            {
+                var _DataToSend = Helpers.DataCompressor.Zip(Data);
+
+                if (_DataToSend.Length <= 32022)
+                {
+                    PacketData xdata = new PacketData();
+
+                    xdata.Packet_Type = (UInt16)PacketType.TYPE_Message;
+                    xdata.Packet_SubType = (UInt16)PacketTypeSubmessage.SUBMSG_MessageEnd;
+                    xdata.Packet_Size = (UInt16)Marshal.SizeOf(typeof(PacketData));
+                    _DataToSend.CopyTo(xdata.Data, 0);
+
+                    xdata = xdata.SignPacket(SoftConfigs._LocalConfig.PrivateKey);
+
+                    Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
+                    SendMessage(ClientId, _Data, PacketType.TYPE_Message);
+                }
+                else
+                {
+                    // ToDo
+                }
+            }
+            catch (Exception ex)
+            {
+                // ToDo
+            }
+        }
+
+
+        #region Server Core
+
+        private void SendMessage(String _Guid, Byte[] _Data, PacketType _Type)
         {
             try
             {
@@ -101,58 +137,6 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
-
-
-
-
-        StringBuilder _SB;
-        void AssembleMessage(String _ClientID, Byte[] _Data)
-        {
-            try
-            {
-                PacketData IncomingData = new PacketData();
-                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
-
-                if (IncomingData.Verify() == false) return;
-
-                switch (IncomingData.Packet_SubType)
-                {
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageStart:
-                        {
-                            if (_WorkerSockets.ContainsKey(_ClientID))
-                            {
-                                _SB = new StringBuilder(PacketFunctions.NormalizeChars(IncomingData.Data));
-                            }
-                        }
-                        break;
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageBody:
-                        {
-                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
-                        }
-                        break;
-                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageEnd:
-                        {
-                            _SB.Append(PacketFunctions.NormalizeChars(IncomingData.Data));
-
-                            /****************************************************************/
-                            //Now tell the client teh message was received!
-                            PacketData _Responce = new PacketData();
-                            _Responce.Packet_Type = (UInt16)PacketType.TYPE_MessageReceived;
-
-                            Byte[] _ResponceData = PacketFunctions.StructureToByteArray(_Responce);
-
-                            SendMessage(_ClientID, _ResponceData, PacketType.TYPE_MessageReceived);
-                        }
-                        break;
-                }
-            }
-            catch
-            {
-                // ToDo
-            }
-        }
-
-        #region Server Core
         void NormalizeThePackets()
         {
             while (_MainSocket.IsBound)
@@ -413,11 +397,18 @@ namespace BlockAPP_Core.Core.Network
                                 }
                                 break;
                             case (UInt16)PacketType.TYPE_Close:
-                                ClientDisconnect(_NewFullPacket.ClientId);
+                                    ClientDisconnect(_NewFullPacket.ClientId);
                                 break;
                             case (UInt16)PacketType.TYPE_Message:
                                 {
-                                    AssembleMessage(_NewFullPacket.ClientId, _NewFullPacket.Data);
+                                    if (_WorkerSockets.ContainsKey(_NewFullPacket.ClientId) && _WorkerSockets[_NewFullPacket.ClientId].Accepted)
+                                    {
+                                        AssembleMessage(_NewFullPacket.ClientId, _NewFullPacket.Data);
+                                    }
+                                    else
+                                    {
+                                        ClientDisconnect(_NewFullPacket.ClientId);
+                                    }
                                 }
                                 break;
                             case (UInt16)PacketType.TYPE_ClientDisconnecting:
@@ -463,6 +454,58 @@ namespace BlockAPP_Core.Core.Network
                 // ToDo
             }
         }
+        void AssembleMessage(String _ClientID, Byte[] _Data)
+        {
+            try
+            {
+                PacketData IncomingData = new PacketData();
+                IncomingData = (PacketData)PacketFunctions.ByteArrayToStructure(_Data, typeof(PacketData));
+
+                if (IncomingData.Verify() == false) return;
+
+                switch (IncomingData.Packet_SubType)
+                {
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageStart:
+                        {
+                            if (_WorkerSockets.ContainsKey(_ClientID))
+                            {
+                                _WorkerSockets[_ClientID].MessageBuilder = new List<byte>(IncomingData.Data);
+                            }
+                        }
+                        break;
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageBody:
+                        {
+                            _WorkerSockets[_ClientID].MessageBuilder.AddRange(IncomingData.Data);
+                        }
+                        break;
+                    case (UInt16)PacketTypeSubmessage.SUBMSG_MessageEnd:
+                        {
+                            _WorkerSockets[_ClientID].MessageBuilder.AddRange(IncomingData.Data);
+
+                            var _UncompressedData = Helpers.DataCompressor.Unzip(_WorkerSockets[_ClientID].MessageBuilder.ToArray());
+                            var _JObj = JObject.Parse(_UncompressedData);
+                            if (_FinalizedMessages.ContainsKey(_ClientID)) _FinalizedMessages[_ClientID].Add(_JObj);
+                            else _FinalizedMessages.Add(_ClientID, new List<JObject>() { _JObj });
+
+                            _WorkerSockets[_ClientID].MessageBuilder = new List<byte>();
+
+                            PacketData _Responce = new PacketData();
+                            _Responce.Packet_Type = (UInt16)PacketType.TYPE_MessageReceived;
+                            Helpers.DataCompressor.Zip((String)_JObj["id"]).CopyTo(_Responce.Data, 0);
+                            //_FinalizedMessages
+                            Byte[] _ResponceData = PacketFunctions.StructureToByteArray(_Responce);
+
+                            SendMessage(_ClientID, _ResponceData, PacketType.TYPE_MessageReceived);
+                        }
+                        break;
+                }
+            }
+            catch
+            {
+                // ToDo
+            }
+        }
+
         #endregion
 
         #region System methods
@@ -593,7 +636,7 @@ namespace BlockAPP_Core.Core.Network
 
                         if (diff.TotalSeconds >= 60 || _Sock.UserSocket.Connected == false)//10 minutes
                         {
-                            ClientIDsToClear.Add(_Sock.Id);
+                           // ClientIDsToClear.Add(_Sock.Id); ToDo
                         }
                     }
                 }
@@ -630,7 +673,7 @@ namespace BlockAPP_Core.Core.Network
                 lock (_WorkerSockets)
                 {
                     String _ClientAddr = ((IPEndPoint)_WorkerSockets[_ClientId].UserSocket.RemoteEndPoint).Address.ToString();
-                    _ClientAddr.CopyTo(0, xdata.Data, 0, _ClientAddr.Length);
+                    Helpers.DataCompressor.Zip(_ClientAddr).CopyTo(xdata.Data, 0);
 
                     Byte[] _Data = PacketFunctions.StructureToByteArray(xdata);
 

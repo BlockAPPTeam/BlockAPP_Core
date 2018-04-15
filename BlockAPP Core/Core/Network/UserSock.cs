@@ -11,6 +11,7 @@ namespace BlockAPP_Core.Core.Network
         {
             Id = _Guid;
             UserSocket = _Sock;
+            MessageBuilder = new List<byte>();
         }
 
         public String Id { get; private set; } 
@@ -23,5 +24,7 @@ namespace BlockAPP_Core.Core.Network
 
 
         public int _ZeroDataCount { get; internal set; }
+
+        public List<Byte> MessageBuilder { get; set; }
     }
 }

@@ -27,7 +27,7 @@ namespace BlockAPP_Core.Core.Network.Models
         public Char[] PublicKey = new Char[392];
 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32022)]
-        public Char[] Data = new Char[32022];
+        public Byte[] Data = new Byte[32022];
 
         //344 + 392 + 6 + 4 + 32022 = 32768
 

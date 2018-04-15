@@ -10,6 +10,8 @@ using BlockAPP_Core.Core.Network.Enums;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Net;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BlockAPPRunner
 {
@@ -51,10 +53,14 @@ namespace BlockAPPRunner
 
                 _Server.Connect(IPAddress.Parse(Networking.GetLocalIP()), 10001);
 
+
                 //StartServer();
 
-        
-
+                Task.Run(async () =>
+                {
+                    await Task.Delay(5000);
+                    _Server.SendData(@"{ id: ""TestIs"", Data: ""TestData"" }", _Server._WorkerSockets.First().Key);
+                });
                 Console.ReadLine();
             }
         }
